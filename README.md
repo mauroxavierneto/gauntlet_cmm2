@@ -8,8 +8,12 @@ Keep in mind I´m only a Gauntlet fan with some basic developing skills and my t
 
 Changelog:
 
-v0.1a
-- Initial port from CMM1 to CMM2 - very unoptimized - Made for the first CMM2 Gauntlet video on my Youtube channel.
+v0.3a - 2020-05-06
+- Made for the first CMM2 Gauntlet video on my Youtube channel.
+- Some little optimizations
+
+v0.1a - 2020-04-20
+- Initial port from CMM1 to CMM2 - very unoptimized
 - One player only.
 - Only keyboard.
 - Credits not working on the options menu.
