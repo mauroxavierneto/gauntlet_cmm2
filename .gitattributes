@@ -1,0 +1,5 @@
+*.bas linguist-detectable=false
+*.inc linguist-detectable=false
+*.INC linguist-vendored
+*.BAS linguist-vendored
+PSGMINI/* linguist-vendored
