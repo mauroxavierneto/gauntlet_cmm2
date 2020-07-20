@@ -1,6 +1,3 @@
 .bas linguist-language=visualbasic
 .inc linguist-language=visualbasic
-PSGMINI/*.inc linguist-language=visualbasic
-.BAS linguist-language=visualbasic
-.INC linguist-language=visualbasic
-PSGMINI/*.INC linguist-language=visualbasic
+PSGMINI/PSGMINI.inc linguist-language=visualbasic
