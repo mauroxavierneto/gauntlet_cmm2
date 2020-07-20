@@ -1,5 +1,2 @@
-*.bas linguist-detectable=false
-*.inc linguist-detectable=false
-*.INC linguist-generated
-*.BAS linguist-generated
-PSGMINI/* linguist-generated
+.bas linguist-language=MMBasic
+.inc linguist-detectable=MMBasic
