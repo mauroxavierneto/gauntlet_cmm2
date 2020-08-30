@@ -1,0 +1,183 @@
+' -- MAP LOADING ROUTINES --
+
+
+' -- TEMPORARY CONVERSION TABLE GAUNTLET CMM TO CMM2 --
+Sub ConvertTable(spr,SPRT,PG)
+ 'SPRT=199 
+ SELECT CASE SPR
+  CASE   0: SPRT=0
+  'PLAYERS
+  CASE   1: SPRT=12
+  CASE   2: SPRT=20
+  CASE   3: SPRT=10
+  CASE   4: SPRT=18
+  CASE   5: SPRT=14
+  CASE   6: SPRT=22
+  CASE   7: SPRT=8
+  CASE   8: SPRT=16
+  'PLAYER SHOOT
+  CASE   9: SPRT=24
+  CASE  10: SPRT=25
+  CASE  11: SPRT=26
+  CASE  12: SPRT=27
+  CASE  13: SPRT=28
+  CASE  14: SPRT=29
+  CASE  15: SPRT=30
+  CASE  16: SPRT=31
+  'OBJECTS
+  CASE  17: SPRT=455  'TREASURE  
+  CASE  20: SPRT=434  'EXIT
+  CASE  21: SPRT=427  'FOOD
+  CASE  22: SPRT=490  'VERTICAL DOOR  
+  CASE  23: SPRT=495  'HORIZONTAL DOOR
+  CASE  24: SPRT=444  'KEY
+  CASE  25: SPRT=426  'ENERGY POTION
+  CASE  26: SPRT=459  'MAGIC POTION
+  CASE  27: SPRT=432  'EXPLODE MAX
+  CASE  28: SPRT=430  'EXPLODE MIN
+  CASE  29: SPRT=481  'TELEPORT 1
+  CASE  30: SPRT=483  'TELEPORT 2
+  'GHOSTS GENERATORS
+  CASE  31: SPRT=394
+  CASE  32: SPRT=393
+  CASE  33: SPRT=392
+  'GHOSTS
+  CASE  34: SPRT=208
+  CASE  35: SPRT=208+8
+  CASE  36: SPRT=209
+  CASE  37: SPRT=209+8
+  CASE  38: SPRT=210
+  CASE  39: SPRT=210+8
+  CASE  40: SPRT=211
+  CASE  41: SPRT=211+8
+  CASE  42: SPRT=212
+  CASE  43: SPRT=212+8
+  CASE  44: SPRT=213
+  CASE  45: SPRT=213+8
+  CASE  46: SPRT=214
+  CASE  47: SPRT=214+8
+  CASE  48: SPRT=215
+  CASE  49: SPRT=215+8
+  'GENERATORS
+  CASE  50: SPRT=397
+  CASE  51: SPRT=396
+  CASE  52: SPRT=395
+  'GRUNTS
+  CASE  53: SPRT=232
+  CASE  54: SPRT=232+8
+  CASE  55: SPRT=234
+  CASE  56: SPRT=234+8
+  CASE  57: SPRT=236
+  CASE  58: SPRT=236+8
+  CASE  59: SPRT=238
+  CASE  60: SPRT=238+8
+  'DEMONS
+  CASE  61: SPRT=248
+  CASE  62: SPRT=248+8
+  CASE  63: SPRT=249
+  CASE  64: SPRT=249+8
+  CASE  65: SPRT=250
+  CASE  66: SPRT=250+8
+  CASE  67: SPRT=251
+  CASE  68: SPRT=251+8
+  CASE  69: SPRT=252
+  CASE  70: SPRT=252+8
+  CASE  71: SPRT=253
+  CASE  72: SPRT=253+8
+  CASE  73: SPRT=254
+  CASE  74: SPRT=254+8
+  CASE  75: SPRT=255
+  CASE  76: SPRT=255+8
+  'DEAD
+  CASE  77: SPRT=200+18*6+12
+  CASE  78: SPRT=200+18*6+14
+  CASE  79: SPRT=200+18*6+16
+  CASE  80: SPRT=200+18*6+18
+  'SLIME
+  CASE  81: SPRT=200+18*8
+  CASE  82: SPRT=200+18*6+1
+  CASE  83: SPRT=200+18*6+2
+  'SORCERER
+  CASE  84: SPRT=296
+  CASE  85: SPRT=298
+  CASE  86: SPRT=300
+  CASE  87: SPRT=302
+  'WALLS
+  CASE  88 TO 105: SPRT=600-88+SPR
+  'FALSE WALL
+  CASE 106: SPRT=799
+  'SPECIAL CASES
+  CASE 200 TO 255: SPRT=SPR+800
+ END SELECT
+
+'PAGE WRITE 12: CLS: LOAD PNG ".\IMAGES\PLAYERS.PNG",,,8
+'PAGE WRITE 3: CLS: LOAD PNG ".\IMAGES\ENEMIES1.PNG",,,8
+'PAGE WRITE 4: CLS: LOAD PNG ".\IMAGES\ENEMIES2.PNG",,,8
+'PAGE WRITE 5: CLS: LOAD PNG ".\IMAGES\ENEMIES3.PNG",,,8
+'PAGE WRITE 6: CLS: LOAD PNG ".\IMAGES\OBJECTS.PNG",,,8
+'PAGE WRITE 7: CLS: LOAD PNG ".\IMAGES\WALLS.PNG",,-17*0,8
+End sub
+
+
+' -- LOAD MAP AND APPLY SOME CONVERTIONS --
+Sub LoadMap(File$)
+ Local mx,my,t,BLK,A$,Tr,nt,PG,b%,c%,d%,e%
+ Tr=0
+ for t=0 to 4
+  x(t)=16:y(t)=16
+ next t
+ px=1:py=1:t=0
+ Open File$ For Input As #1
+ Line Input #1,A$
+ limL=0.5:limR=35
+ PAGE WRITE 2: CLS RGB(0,0,0)
+ For my=1 To 34
+  For mx=1 To 38
+   BLK=Asc(Input$(1,#1))-32
+   ConvertTable(BLK,t,PG)
+   If mx<=34 Then    
+    If t=12 Then
+     st(my,mx)=0  
+     Do While x(0)\16<>mx-px-2 Or y(0)\16<>my-py-1
+      If x(0)\16<mx-px-2 Then x(0)=x(0)+16
+      If x(0)\16>mx-px-2 Then x(0)=x(0)-16
+      If y(0)\16<my-py-1 Then y(0)=y(0)+16
+      If y(0)\16>my-py-1 Then y(0)=y(0)-16
+      If x(0)<120 And px>1 Then x(0)=x(0)+16:px=px-1
+      If y(0)<88 And py>1 Then y(0)=y(0)+16:py=py-1
+      If x(0)>128 And px<35-15 Then x(0)=x(0)-16:px=px+1
+      If y(0)>96 And py<32-14 Then y(0)=y(0)-16:py=py+1
+     Loop
+    Else
+     SELECT CASE t
+      CASE 616: t=0
+      CASE 1019 : t=0:Tr=Tr+1:xh(Tr)=mx:yh(Tr)=my 'MARK RANDOM EXIT
+      CASE 200 TO 399: t=t+2000                   'ALL MONSTERS LEVEL 3 ON LOAD      
+      CASE <=199: t=0                             'TRY TO REMOVE GARBAGE
+     END SELECT
+     ST(my,mx)=t
+     if (t>0 and t<999) or t=1023 then
+      'ORIGINAL MAP
+      box mx*2,my*2,2,2,1,rgb(255,255,255),rgb(255,255,255)
+      'WALLS - DON'T GET FAKE WALL AND FREEZE FLOOR
+      if t>=500 and t<>617 and t<>799 then box mx*2,my*2+100,2,2,1,rgb(255,255,255),rgb(255,255,255)
+     endif
+    EndIf
+   EndIf
+ Next mx,my
+
+ 'INSERT FOUR PLAYERS ON THE MAP
+ for t=1 to 2
+  x(t)=x(0): y(t)=y(0)+(t-1)*16
+ next t
+ for t=3 to 4
+  x(t)=x(0)+16: y(t)=y(0)+(t-3)*16
+ next t
+
+ If Tr>0 Then i=Int(Rnd(55)*Tr)+1:ST(yh(i),xh(i))=434 'CHOOSE RANDOM EXIT
+ PAGE WRITE 0
+ 'PAGE COPY 9 TO 0,I: PAUSE (10000)
+ Close #1
+End Sub
+
+
