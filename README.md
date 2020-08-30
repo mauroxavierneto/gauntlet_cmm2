@@ -8,6 +8,28 @@ Keep in mind I´m only a Gauntlet fan with some basic developing skills and my t
 
 Changelog:
 
+v0.4a - 2020-08-06
+- Need at least the 5.05.05 firmware or it doesn´t run!
+- Two players support.
+- 320x240 resolution.
+- Smoother scroll.
+- Removed 8-bit sound style for speed sake (sorry!).
+- The player's characteristics were rebalanced.
+- Some speed optimizations.
+- Source code separated in INC files.
+- Four-channel sound effects support thanks to the last update on the firmware.
+- Sound test with music and voices in the options screen.
+- Some arts was redone to 320x240 resolution.
+- Wii Classic Controller support (not Wii Nunchuk yet).
+- The copyright screen was disabled until the next release.
+
+Known bugs:
+- Players sometimes don´t centralize in the exit.
+- Demon´s fire stopped working.
+- When someone goes to the exit, the game will change level even if another player is still playing.
+- Many collision bugs.
+
+
 v0.3a - 2020-05-06
 - Made for the first CMM2 Gauntlet video on my Youtube channel.
 - Some little optimizations
