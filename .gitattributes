@@ -1,5 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
-.bas linguist-language=visualbasic
-.inc linguist-language=visualbasic
-PSGMINI/PSGMINI.inc linguist-language=visualbasic
+* linguist-vendored=false
+*.bas linguist-language=PureBasic
+*.inc linguist-language=PureBasic
+*.BAS linguist-language=PureBasic
+*.INC linguist-language=PureBasic
