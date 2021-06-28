@@ -1,7 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 * linguist-vendored=false
-*.bas linguist-language=PureBasic
-*.inc linguist-language=PureBasic
-*.BAS linguist-language=PureBasic
-*.INC linguist-language=PureBasic
+*.bas linguist-language=BASIC
+*.inc linguist-language=BASIC
+*.BAS linguist-language=BASIC
+*.INC linguist-language=BASIC
