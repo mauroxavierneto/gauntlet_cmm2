@@ -45,7 +45,7 @@ End Sub
 Sub PrintG(x,y,st$)
  FOR L_T = 1 TO LEN(st$)
   LXt=(ASC(mid$(st$,L_T,1))-32)*6
-  LYt=170: IF LXt>318 THEN LXt=LXt-318:LYt=178
+  LYt=170: IF LXt>=318 THEN LXt=LXt-318:LYt=178
   BLIT LXt,LYt,x+L_T*6,y,6,8,8,0
  NEXT L_T
 End Sub

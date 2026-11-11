@@ -1,7 +1,14 @@
-# Auto detect text files and perform LF normalization
+# BASIC stays convenient for SD-card checkout; maps are fixed-width binary data.
 * text=auto
+*.BAS -text linguist-language=BASIC
+*.INC text eol=crlf linguist-language=BASIC
+*.bas -text linguist-language=BASIC
+*.inc text eol=crlf linguist-language=BASIC
+*.MAP -text -diff
+*.map -text -diff
+*.png -text
+*.wav -text
+*.mod -text
+*.md text eol=lf
+*.py text eol=lf
 * linguist-vendored=false
-*.bas linguist-language=BASIC
-*.inc linguist-language=BASIC
-*.BAS linguist-language=BASIC
-*.INC linguist-language=BASIC

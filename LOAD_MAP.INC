@@ -123,6 +123,12 @@ End sub
 Sub LoadMap(File$)
  Local mx,my,t,BLK,A$,Tr,nt,PG,b%,c%,d%,e%
  Tr=0
+ 'DISCARD THE PREVIOUS ROOM, INCLUDING ANY OFFSCREEN ENEMY MARKERS
+ For my=0 To 37
+  For mx=0 To 37
+   st(my,mx)=0
+  Next mx
+ Next my
  for t=0 to 4
   x(t)=16:y(t)=16
  next t

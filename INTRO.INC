@@ -31,9 +31,12 @@ if music=1 then
 endif
 
 co=1:temp=0:Timer=0
+kb=0:titleReleased=0
 Do While Kb<>32
- kb=KeyDown(1)
- If kb=27 Then Mode 1:End
+ k=KeyDown(1)
+ If k=27 Then Mode 1:End
+ If k<>32 Then titleReleased=1
+ If titleReleased=1 Then kb=k
  PAGE SCROLL 3,0,2
  PAGE COPY 3 TO 4,I
  PAGE WRITE 4

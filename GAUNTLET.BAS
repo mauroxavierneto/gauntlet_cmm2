@@ -8,6 +8,8 @@ Version$="v0.4a"
 #INCLUDE "PRINT.INC"
 #INCLUDE "LOAD_MAP.INC"
 #INCLUDE "SOUND.INC"
+#INCLUDE "COLLISION.INC"
+#INCLUDE "EXIT.INC"
 
 GoTo INIT
 
@@ -41,9 +43,10 @@ End Sub
 
 ' SHOW MAIN CHARACTER
 Sub PutSpriteChar(spr,pl,xtt,ytt)
- spr=spr+(PType(pl)-1)*40 
- YTp=FIX(SPR*17/306)*17
- XTp=(SPR MOD 18)*17
+ Local spriteIndex,YTp,XTp
+ spriteIndex=spr+(PType(pl)-1)*40
+ YTp=FIX(spriteIndex*17/306)*17
+ XTp=(spriteIndex MOD 18)*17
  PAGE WRITE 3: BLIT XTp,YTp,Xtt,Ytt,16,16,12,4
 End Sub
 
@@ -76,7 +79,12 @@ End Sub
 
 ' READ OR WRITE ON STAGE ARRAY CONVERTED TO PIXELS
 Sub BlockStage(mx,my,r)
- if r<0 then mx=mx\1: my=my\1
+ 'BOUND COLLISION MAP ACCESS BEFORE READING OR WRITING PIXEL MEMORY
+ if mx<0 or my<0 or mx>=36 or my>=36 then
+  if r>=0 then r=r+1020
+  exit sub
+ endif
+ mx=Int(mx):my=Int(my)
  SELECT CASE r
   CASE >=0: ' READ PIXEL
    ad%=(FStage%+(dbR*2*my)+mx*2)
@@ -139,6 +147,7 @@ Dim x(4), y(4), xx(4), yy(4), xf(4), yf(4), xfs(4), yfs(4), xfa(4), yfa(4), xtf(
 Dim side(4), fire(4), firstf(4), repFire(4), fstart(4), xs(4), ys(4), shotv(4), fireCol(4)
 Dim animSpr(4), anim(4), mv(4), mov(4), tspd(4), spd(4), nowalk(4), kspace(4), timeRAW(4)
 Dim plu(4),pld(4),pll(4),plr(4), start(4)
+Dim exitX(4),exitY(4)
 Dim CtrlType(4),CtrlChange(4)
 
 If test>0 Then
@@ -329,8 +338,7 @@ Sub MapScan(pl)
      if (tts=0 and clmap=1) or clmap=3 then BlockStage(xxm+xz,yym+yz,-1)
     'EXIT
     CASE 434:
-    'PutTile(434,xxm*16-SCX+BX,yym*16-SCY+BY)
-     If start(pl)>3 And start(pl)<=100 Then x(pl)=xxm*16-SCX+BX:y(pl)=yym*16-SCY+BY
+      'EXIT POSITION IS SAVED WHEN ENTERED, NOT CHOSEN BY THE MAP SCAN
     'CASE 1023: PutTile(611,xxm*16-SCX+BX,yym*16-SCY+BY)
     'CASE 400 TO 599: PutTile(tts,xcm,ycm)
     'CASE 600 TO 798: PutTile(tts,xcm,ycm)
@@ -340,13 +348,16 @@ Sub MapScan(pl)
       SELECT CASE tts
        'LEVEL 1
        CASE  200 TO  399,  595 TO  597,  695 TO  697:
-        AddEnemy(xxm*16-SCX+BX,yym*16-SCY+BY,0,tts,pl):st(yym+yz+by\16,xxm+xz+bx\16)=0
+        AddEnemy(xxm*16-SCX+BX,yym*16-SCY+BY,0,tts,pl)
+        If addedEnemy>0 Then st(yym+yz,xxm+xz)=0
        'LEVEL 2
        CASE 1200 TO 1399, 1595 TO 1597, 1695 TO 1697:
-        AddEnemy(xxm*16-SCX+BX,yym*16-SCY+BY,0,tts,pl):st(yym+yz+by\16,xxm+xz+bx\16)=0
+        AddEnemy(xxm*16-SCX+BX,yym*16-SCY+BY,0,tts,pl)
+        If addedEnemy>0 Then st(yym+yz,xxm+xz)=0
        'LEVEL 3
        CASE 2200 TO 2399, 2595 TO 2597, 2695 TO 2697:
-        AddEnemy(xxm*16-SCX+BX,yym*16-SCY+BY,0,tts,pl):st(yym+yz+by\16,xxm+xz+bx\16)=0
+        AddEnemy(xxm*16-SCX+BX,yym*16-SCY+BY,0,tts,pl)
+        If addedEnemy>0 Then st(yym+yz,xxm+xz)=0
       END SELECT
     endif
    END SELECT
@@ -369,7 +380,7 @@ Sub MapClear
    For tx=-4 to 0 step 4
     For ty=-4 to 0 step 4
      xxz=((xx+xz)*16+tx+SCX)\16:yyz=((yy+yz)*16+ty+SCY)\16
-     SELECT CASE st(yyz,xxz)
+     SELECT CASE SafeTile(xxz,yyz)
       CASE  0,434:
        FRAMEBUFFER WRITE: BOX xxz*16,yyz*16,16,16,0,,RGB(0,0,0)
        FRAMEBUFFER RESTORE xxz*16,yyz*16,16,16
@@ -394,7 +405,7 @@ Sub Fast_MapClear
  For xx=xa To xb Step s
   For yy=ya To yb
    xxz=((xx+xz)*16-4+SCX)\16:yyz=((yy+yz)*16-4+SCY)\16
-   SELECT CASE st(yyz,xxz)
+   SELECT CASE SafeTile(xxz,yyz)
     CASE  0:
      FRAMEBUFFER WRITE: BOX xxz*16,yyz*16,16,16,0,,RGB(0,0,0)
      FRAMEBUFFER RESTORE xxz*16,yyz*16,16,16
@@ -411,25 +422,28 @@ End Sub
 'RENDER THE PLAYER
 Sub YOU(C,pl)
  MINF$=MM.INFO$(SOUND)
+ If energy(pl)<=0 Then Exit Sub
+ If start(pl)>=31 And start(pl)<=100 Then
+  x(pl)=(exitX(pl)-px-1)*16-SCX
+  y(pl)=(exitY(pl)-py-1)*16-SCY
+ EndIf
  SELECT CASE start(pl)
   'ON STAGE
   CASE 0: PutSpriteChar(C,pl,x(pl),y(pl))
   'EXITING
   CASE 42 TO 100:  
-   start(pl)=start(pl)-1
-   if start(pl)=99 then PlayWAV("EXIT",100)
    anim(pl)=-10:side(pl)=0:tspd(pl)=0
    AnimSpr(pl)=AnimSpr(pl)+2:if AnimSpr(pl)>23 then AnimSpr(pl)=0
-   PutSpriteChar(C,pl,x(pl),y(pl)) 
+   PutSpriteChar(AnimSpr(pl),pl,x(pl),y(pl))
+   start(pl)=start(pl)-1
   CASE 31 TO 41:  
-   if start(pl)=40 then PlaySample(22,22050)
+   if start(pl)=41 then PlaySample(22,22050)
    anim(pl)=-10:side(pl)=0:AnimSpr(pl)=172-(start(pl)-31)\2 
-   PutSprite(AnimSpr(pl),x(pl),y(pl)) 
+   PutSprite(AnimSpr(pl),x(pl),y(pl))
+   start(pl)=start(pl)-1
   CASE 30:
-   c=0:nextroom=1:room=room+1
+   'WAIT HERE UNTIL EVERY LIVING PLAYER HAS FINISHED EXITING
    AnimSpr(pl)=0:anim(pl)=0
-   PlaySample(17,11000)
-   pause(100)
  END SELECT 
 End Sub
 
@@ -469,6 +483,9 @@ GAMELOOP:
 
 DO 'GAME LOGIC
 
+For t=PLN To PLQ
+ If energy(t)<=0 Then start(t)=-1:fire(t)=0:xf(t)=-64:yf(t)=-64
+Next t
 pl=PLN          ' RESET TO START LOGIC FROM FIRST PLAYER
 sgxE=0: sgyE=0  ' TO MOVE OBJECTS WITH THE SCREEN SCROLL
 MOVED=0         ' SOMEONE SCROLLED THE SCREEN?
@@ -510,12 +527,12 @@ for t=1 to 5
  endif
  If k=K_ESC Then 
   PAGE WRITE 0
-  mode 1: cls: end
+   Mode 1:Cls:End
  endif
 next t
 
 'WII CLASSIC CONTROLLER
-if CtrlType(pl)=1 and nowalk(pl)=0 then
+if CtrlType(pl)=1 and nowalk(pl)=0 and start(pl)=0 and energy(pl)>0 then
  KC$=RIGHT$("00000000000000"+BIN$(CLASSIC(B,3)),14)
  LX=CLASSIC(LX,3)
  LY=CLASSIC(LY,3)
@@ -531,7 +548,7 @@ if CtrlType(pl)=1 and nowalk(pl)=0 then
 endif
 
 ' MAGIC
-If ka$="M" And bomb(pl)>0 Then 
+If ka$="M" And bomb(pl)>0 And start(pl)=0 And energy(pl)>0 Then
  For t=1 To maxg:If ae(t)>0 Then PutSprite(432,xe(t),ye(t),3)
  Next t
  updOSD=1:bomb(pl)=bomb(pl)-1
@@ -606,15 +623,18 @@ If start(pl)=0 Then
  if y(pl)<=0 then y(pl)=0
  if y(pl)>=224 then y(pl)=224
 
- ' PLAYER COLLISION
- xant=x(pl):yant=y(pl)
- For tx=0 To 1: For ty=0 To 1
-  rx=(x(pl)-tx*8+SCX+4)/16+xz:ry=(y(pl)-ty*8+SCY+4)/16+yz
-  if rx>=0 and ry>=0 and rx<=35 and ry<=35 then US=st(ry,rx)
+  ' RESOLVE MOVEMENT BEFORE INTERACTING WITH REACHABLE TILES
+  xant=x(pl):yant=y(pl)
+  MovePlayer(pl,xant,yant)
+  xant=x(pl):yant=y(pl)
+  For tx=0 To 1: For ty=0 To 1
+  rx=Int((xant+2+tx*11+SCX)/16)+px+1:ry=Int((yant+2+ty*11+SCY)/16)+py+1
+  US=SafeTile(rx,ry)
+  If start(pl)<>0 Then US=0
   SELECT CASE US
    'KEY
    CASE 444:
-    if key(pl)<=9 Then
+     if key(pl)<9 And bomb(pl)+key(pl)<13 Then
      score(pl)=score(pl)+15:Key(pl)=Key(pl)+1:updOSD=1
      anim(pl)=0:If SAVEKE=0 Then SAVEKE=1
      mv(pl)=-1:st(ry,rx)=0
@@ -655,8 +675,7 @@ If start(pl)=0 Then
     endif
    'EXIT
    CASE 434:
-    start(pl)=100:mv(pl)=-4:anim(pl)=0:x(pl)=xx(pl):y(pl)=yy(pl): Collided=1
-    PlayWAV("EXIT",100)
+     BeginExit(pl,rx,ry): Collided=1
    'FREEZE FLOOR
    CASE 617:
     BlockStage(rx,ry,-1)
@@ -664,29 +683,9 @@ If start(pl)=0 Then
     x(pl)=xx(pl):y(pl)=yy(pl): Collided=1
     PlaySample(18,22050)
   END SELECT
-  if start(pl)=0 then
-   'OTHER BLOCKS / WALLS - SWAP EACH AXYS ON GAME LOGIC TICK TO ALLOW DIAGONAL MOVEMENT
-   SELECT CASE US
-    CASE 200 TO 1000, 1023, 1392 TO 1397, 1592 TO 1597, 1692 TO 1697: 
-     if Anim(pl) Mod 2=0 then
-      x(pl)=xx(pl): rx=(x(pl)-tx*8+SCX+4)/16+xz: if st(ry,rx)<>0 then y(pl)=yy(pl)
-     else 
-      y(pl)=yy(pl): ry=(y(pl)-ty*8+SCY+4)/16+yz: if st(ry,rx)<>0 then x(pl)=xx(pl)
-     endif
-    Collided=1
-   END SELECT
-  endif
  Next ty,tx
 
- ' PLAYER COLLISION WITH OTHERS
- for t=PLN TO PLQ
-  if t<>pl then
-   if x(pl)+16>x(t) and x(pl)<x(t)+16 and y(pl)+16>y(t) and y(pl)<y(t)+16 then Collided=1: x(pl)=xx(pl): y(pl)=yy(pl)
-  endif
- next t
-  
- ' CENTRALIZE COLLISION
- if Collided=1 then x(pl)=(x(pl)*8)\8: y(pl)=(y(pl)*8)\8: scx=(scx*8)\8: scy=(scy*8)\8
+  If start(pl)=0 And nowalk(pl)=0 Then MovePlayer(pl,xant,yant)
 EndIf
 
 ' DEFINE PLAYER SPRITE WHEN NOT MOVING
@@ -697,7 +696,7 @@ Else
 EndIf
 
 ' RESPOND TO SHOT ONLY AFTER VERIFY PLAYER COLLISION
-if kspace(pl)=1 and fire(pl)=0 then
+if kspace(pl)=1 and fire(pl)=0 and start(pl)=0 and energy(pl)>0 then
  fire(pl)=1:firstf(pl)=6
  SELECT CASE Ptype(pl)
   CASE 1: PlaySample(30,18000)
@@ -715,19 +714,17 @@ if kspace(pl)=1 and fire(pl)=0 then
  If Pld(pl)=1 And Plr(pl)=1 Then xs(pl)=35
  If Pld(pl)=1 And Pll(pl)=1 Then xs(pl)=37 
  scx=(scx*8)\8: scy=(scy*8)\8
- xf(pl)=((x(pl)+xfs(pl))*8)\8
- yf(pl)=((y(pl)+yfs(pl))*8)\8
+  xf(pl)=x(pl):yf(pl)=y(pl)
  fstart(pl)=0:repFire(pl)=1
  If cshs(pl)>=8 Then repFire(pl)=2 
  if PType(pl)=0 then xs(pl)=xs(pl)-8
- if PType(pl)<>1 then xf(pl)=xf(pl)+xfs(pl):yf(pl)=yf(pl)+yfs(pl)
 EndIf
 
 ' DEFINE IF THE SHOT IS TOO FAST AND NEED A SECOND COLLISION DETECTION
 If cshs(pl)>=4 and cshs(pl)<=7 And tac=0 Then repFire(pl)=1 Else repFire(pl)=2
 
 ' IT'S A DEMON FIRE? THEN ADD ANOTHER SCAN
-repD=-1:If dfire>0 Then repFire(pl)=repFire(pl)+1:repD=repFire(pl)
+repD=-1:If dfire=1 And pl=PLN Then repFire(pl)=repFire(pl)+1:repD=repFire(pl)
 
 ' ** PLAYER SHOT LOOP **
 rept=0
@@ -735,7 +732,7 @@ h=15 'shot collision size
 Do While rept<repFire(pl)
  rept=rept+1
  ' DEMON FIRE
- If dfire>0 And rept=repD Then plf=0 else plf=pl
+  If dfire=1 And rept=repD Then plf=0 else plf=pl
 
  ' ** EXECUTE ON SHOOTING **
  If fire(plf)=1 Then 
@@ -759,27 +756,19 @@ Do While rept<repFire(pl)
    shotv(plf)=0
   EndIf
   
-  ' TEST WITH COLLISION MAP
-  fireCol(plf)=0
-  for t=-1 to 1: for i=-1 to 1
-   BlockStage( (xf(plf)+SCX)\16+xz+t, (yf(plf)+SCY)\16+yz+i,fireCol(plf)) 
-  next i,t
-
   ' SHOT OFFSCREEN? 
   If xf(plf)<-16 Or xf(plf)>240 Or yf(plf)<-16 Or yf(plf)>240 Then
    fire(plf)=2  
-  Elseif fireCol(plf)>0 then ' ONLY WHEN FOUND A PIXEL IN THE COLLISION MAP
+   Else
 
    'SHOT COLLISION ON WALLS AND OBJECTS
    For tx=0 To 1:For ty=0 To 1
-    txx=(xf(plf)+tx*8+SCX-4)/16+xz:tyy=(yf(plf)+ty*8+SCY-4)/16+yz
-    If txx>34 Then txx=34
-    If tyy>34 Then tyy=34
-    if tyy>=0 and txx>=0 then US=st(tyy,txx) else US=0
+     txx=Int((xf(plf)+2+tx*11+SCX)/16)+px+1:tyy=Int((yf(plf)+2+ty*11+SCY)/16)+py+1
+     US=SafeTile(txx,tyy)
     'DON'T BLOCK SHOT ON ENEMY STRINGS AND SHOCK FLOOR
-    If US<>0 AND US<>617 AND US<=1055 Then
+     If US>0 AND US<>617 AND US<5000 Then
      'SHOT MAGIC POTION OR FOOD
-     If US=426 Or US=459 Then
+      If plf>0 And (US=426 Or US=459) Then
       mv(plf)=-2:fstart(plf)=2:atmp=US: PlaySample(15,22050)
       If atmp=459 Then 
        st(tyy,txx)=-1
@@ -790,7 +779,7 @@ Do While rept<repFire(pl)
       ENDIF
      EndIf
      'SHOT FAKE WALL OR HIDDEN EXIT
-     If US=799 OR US=1023 Then
+      If plf>0 And (US=799 OR US=1023) Then
       PlaySample(15,22050)
       If rept<>repD Then      
        If US=799 Then
@@ -806,21 +795,18 @@ Do While rept<repFire(pl)
       fstart(plf)=2
      EndIf
      PutExplosion(0,xf(plf),yf(plf))
-     If US>=400 Then fire(plf)=2    
+      fire(plf)=2
     EndIf 'IF US<>0
    Next ty,tx  
 
    ' SHOT COLLISION WITH ENEMIES
-   tx=Abs(xfs(plf))+h:ty=Abs(yfs(plf))+h
-   If xfs(plf)<>0 And yfs(plf)<>0 Then tx=h:ty=h
-   If fire(plf)<>2 then
+   If fire(plf)=1 And plf>0 then
     For n=1 To cntg
-     If ae(n)>0 And (n<>DnFire Or rept<>repD) Then
+      If ae(n)>0 And en(n)>0 Then
       xt=xe(n):yt=ye(n)
-      If xt+tx>=xf(plf) And xt<=xf(plf)+tx And yt+ty>=yf(plf) And yt<=yf(plf)+ty Then
+       If xt+14>xf(plf)+2 And xt+2<xf(plf)+14 And yt+14>yf(plf)+2 And yt+2<yf(plf)+14 Then
        en(n)=en(n)-(Csht(plf)*2):lv(n)=lv(n)-1
        xtf(plf)=xt:ytf(plf)=yt:cef=ce(n):tt=te(n)
-       If rept=repd Then xtf(0)=xt:ytf(0)=yt      
        PutExplosion(0,xt,yt)
        If tt Mod 2=0 Then 'GENERATORS
         PlaySample(15,22050)
@@ -833,22 +819,30 @@ Do While rept<repFire(pl)
        Else
         fire(plf)=3
        EndIf
-       xf(plf)=xe(n):yf(plf)=ye(n)
+        xf(plf)=xt:yf(plf)=yt
        if lv(n)<0 then lv(n)=0
+        Exit For
       EndIf
      EndIf
     Next n
    EndIf 'fire<>2
 
-  EndIf 'fireCol>0
+   EndIf 'ON SCREEN
 
-  if rept=1 or (PType(plf)=3 and sw=0) then PutSpriteChar(fix(xs(plf)),plf,xf(plf),yf(plf))
-  if dfire>0 and rept=repD then PutSprite(xs(plf),xf(plf),yf(plf),3)
+   if plf>0 And (rept=1 or (PType(plf)=3 and sw=0)) then PutSpriteChar(fix(xs(plf)),plf,xf(plf),yf(plf))
+   if plf=0 then PutSprite(xs(0),xf(0),yf(0),3)
 
   'DEMON SHOT ON PLAYER
-  If rept=repD And x(plf)+h>=xf(plf) And x(plf)<=xf(plf)+h And y(plf)+h>=yf(plf) And y(plf)<=yf(plf)+h Then
-   HurtSound(PType(plf)): Energy(plf)=Energy(plf)-22+Carm(plf)*2
-   PutExplosion(0,xf(plf),yf(plf)): fire(plf)=2  
+   If plf=0 And fire(0)=1 Then
+    For t=PLN To PLQ
+     If start(t)=0 And energy(t)>0 Then
+      If x(t)+14>xf(0)+2 And x(t)+2<xf(0)+14 And y(t)+14>yf(0)+2 And y(t)+2<yf(0)+14 Then
+       HurtSound(PType(t)): Energy(t)=Max(0,Energy(t)-22+Carm(t)*2):updOSD=1:refresh=1
+       PutExplosion(0,xf(0),yf(0)): fire(0)=2
+       Exit For
+      EndIf
+     EndIf
+    Next t
   EndIf
 
  EndIf 'fire=1
@@ -863,19 +857,21 @@ BX=0:BY=0
 
 'ALL PLAYERS IS ON THE SCREEN?
 for t=PLN to PLQ
+ if start(t)=0 and energy(t)>0 then
  if x(t)<=0 then ok_r=0
  if x(t)>=224 then ok_l=0
  if y(t)<=0 then ok_d=0
  if y(t)>=224 then ok_u=0
+ endif
 next t
 
 'BLITTING / SCROLL / MAP LIMITS
 'MOVE PLAYER AND SCROLL BLOCK SET - ONLY IF ALL PLAYERS IS ON THE SCREEN
-IF MOVED=0 THEN
- If x(pl)< 80 and ok_l=1 and PLeft=1  And px>limL    Then MVS=7:l=spd(pl):x(pl)=x(pl)+spd(pl):BL=1:BX=-l
- If y(pl)< 80 and ok_u=1 And PUp=1    And py>1       Then MVS=1:u=spd(pl):y(pl)=y(pl)+spd(pl):BL=1:BY=-u
- If x(pl)>144 and ok_r=1 And PRight=1 And px<limR-16 Then MVS=3:r=spd(pl):x(pl)=x(pl)-spd(pl):BL=1:BX=r
- If y(pl)>144 and ok_d=1 And PDown=1  And py<32-17   Then MVS=5:d=spd(pl):y(pl)=y(pl)-spd(pl):BL=1:BY=d
+ IF MOVED=0 And start(pl)=0 And energy(pl)>0 THEN
+  If x(pl)< 80 and ok_l=1 and PLeft=1 And x(pl)<xx(pl) And px>limL Then MVS=7:l=xx(pl)-x(pl):x(pl)=xx(pl):BL=1:BX=-l
+  If y(pl)< 80 and ok_u=1 And PUp=1 And y(pl)<yy(pl) And py>1 Then MVS=1:u=yy(pl)-y(pl):y(pl)=yy(pl):BL=1:BY=-u
+  If x(pl)>144 and ok_r=1 And PRight=1 And x(pl)>xx(pl) And px<limR-16 Then MVS=3:r=x(pl)-xx(pl):x(pl)=xx(pl):BL=1:BX=r
+  If y(pl)>144 and ok_d=1 And PDown=1 And y(pl)>yy(pl) And py<32-17 Then MVS=5:d=y(pl)-yy(pl):y(pl)=yy(pl):BL=1:BY=d
 
  scx=scx-l+r
  scy=scy-u+d
@@ -884,6 +880,7 @@ IF MOVED=0 THEN
  if scy< 0 then scy=scy+16:py=py-1
  if scy>15 then scy=scy-16:py=py+1
 ENDIF
+ xz=px+1:yz=py+1
 
 ' PAGE 3 - SPRITES
 ' PAGE 10 - STAGE + SPRITES
@@ -939,7 +936,8 @@ IF MVS<>0 AND MOVED=0 THEN
     xa= 0: xb=15: ya= 0: yb= 0: MapScan(pl)
   END SELECT
  EndIf
- sgxE=sgxE+sgx: sgyE=sgyE+sgy
+  sgx=l-r:sgy=u-d
+  sgxE=sgxE+sgx: sgyE=sgyE+sgy
 EndIf
 
 If mv(pl)>=-5 And mv(pl)<=-1 Then
@@ -980,9 +978,13 @@ If MOVED=1 Then
   xfa(0)=xfa(0)+sgx:yfa(0)=yfa(0)+sgy
   xtf(0)=xtf(0)+sgx:ytf(0)=ytf(0)+sgy
  EndIf
+  'ENEMIES SHARE THE SAME SCREEN COORDINATES AS THE NEXT PLAYER'S PROBES
+  For t=1 To maxg
+   If ae(t)>0 Then xe(t)=xe(t)+sgx:ye(t)=ye(t)+sgy
+  Next t
 endif
 
-If start(pl)>0 Then start(pl)=start(pl)-1
+If start(pl)>0 And start(pl)<=2 Then start(pl)=start(pl)-1
 If fstart(pl)<4 And fire(pl)>0 Then anim(pl)=1
 
 pl=pl+1
@@ -1025,13 +1027,6 @@ for t=1 to maxg
  if ae(t)>0 then cntg=t: actg=actg+1
 next t
 
-' MOVE ENEMIES WHEN SCROLLING
-if MOVED>0 then
- for t=1 to cntg
-  if ae(t)>0 then xe(t)=xe(t)+sgxE:ye(t)=ye(t)+sgyE
- next t
-EndIf
-
 ' SORT ENEMIES ARRAY TO SPEED UP
 if GoSortEnemies=1 then SortEnemies
 
@@ -1043,9 +1038,12 @@ if stp=1 then stp=2
 scx=(scx*8)\8: scy=(scy*8)\8
 ' INSERT PLAYER ON COLLISION MAP
 for tt=PLN TO PLQ
+ if start(tt)=0 and energy(tt)>0 then
  for t=4 to 8 step 4: for i=4 to 8 step 4
   BlockStage((x(tt)+SCX+t)\16+xz,(y(tt)+SCY+i)\16+yz,-30)
-next i,t,tt
+ next i,t
+ endif
+next tt
 
 ' INSERT ENEMIES ON COLLISION MAP
 For t=1 to cntg
@@ -1077,7 +1075,7 @@ If Timer > EnTime Or refresh=1 Then
  EnTime=Timer+1000
  If refresh=0 Then
   for t=PLN TO PLQ
-   energy(t)=energy(t)-1
+    If start(t)=0 And energy(t)>0 Then energy(t)=energy(t)-1
   next t
  Else
   refresh=0 
@@ -1088,10 +1086,11 @@ for t=PLN TO PLQ
  ' SHOW PLAYERS
  YOU(side(t)+AnimSpr(t),t)
  ' FINISH PLAYER SHOT AND DEMON'S FIRE
- If fstart(t)>0 And fstart(t)<6 and fire(t)>0 And xf(t)<=240 Then PutSpriteChar(side(t)+AnimSpr(t),t,x(t),y(t))
+  If start(t)=0 And energy(t)>0 And fstart(t)>0 And fstart(t)<6 and fire(t)>0 And xf(t)<=240 Then PutSpriteChar(side(t)+AnimSpr(t),t,x(t),y(t))
  If fire(t)>=2 Then fire(t)=0:xf(t)=-64:yf(t)=-64
 next t
-If dfire>=2 Then dfire=0:xf(0)=-64:yf(0)=-64:DnFire=0
+If fire(0)>=2 Then dfire=0:fire(0)=0:xf(0)=-64:yf(0)=-64:DnFire=0
+CheckStageExit
 
 ' SWAP VARIABLE
 If sw=0 Then sw=1 Else sw=0
@@ -1161,6 +1160,7 @@ If SHOTPOT=1 Then SHOTPOT=2:VoiceOver("YOU JUST SHOOT THE POTION!","you shot pot
 If KILLDE=1 Then KILLDE=2:VoiceOver("USE MAGIC TO KILL DEATH!","magic kill death")
 
 ' GO TO NEXT LEVEL/ROOM
+If gameover=1 Then GoTo RESTART
 If nextroom=1 Then nextroom=0: Exit Do
 
 Loop 'GAMELOOP
@@ -1180,8 +1180,11 @@ FStage% = MM.INFO(PAGE ADDRESS  2)+100 '  FULL COLLISION MAP
 for t=0 to 4
  Anim(t)=1:side(t)=3
  nowalk(t)=0:tspd(t)=8
- start(t)=1
+ start(t)=1: If energy(t)<=0 Then start(t)=-1
+ exitX(t)=0:exitY(t)=0
+ fire(t)=0:xf(t)=-64:yf(t)=-64:firstf(t)=0:fstart(t)=0
 next t
+dfire=0:DnFire=0:gameover=0
 
 GoSortEnemies=1
 scx=0:scy=0:difwall=(room-1)*18:VOver$=""
@@ -1193,7 +1196,7 @@ For t=1 To ms:snd(t)=0:Next t
 'RESET EXPLOSIONS
 For t=1 To 10:expl(t)=0:Next t
 
-If room mod 4=0 Then troom=1 Else troom=0
+If room Mod 4=0 Then troom=1 Else troom=0
 
 for t=1 to maxg: ae(t)=0: next t 'DISABLE ALL ENEMIES FOR THE NEXT ROOM
 nextroom=0:refresh=1
@@ -1209,6 +1212,7 @@ NEXT T
 A$="":B$="":C$="":If room<10 Then A$="0"
 
 PLAY STOP
+StopWAV
 LoadMap(".\maps\room"+A$+Str$(room)+".map"):B$="":C$=""
 
 'BUILD MAIN STAGE FRAMEBUFFER
@@ -1227,7 +1231,8 @@ if song>12 then song=1
 if song=9 then song=10
 If troom=1 Then song=song-1
 If troom=0 and music=0 then song=0
-StopWAV: Play Stop
+Play Stop
+StopWAV
 if troom<>1 then PlayMOD(song) else PlayMOD(14)
 
 Goto GAMELOOP

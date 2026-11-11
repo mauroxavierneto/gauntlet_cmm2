@@ -23,7 +23,9 @@ End Sub
 
 ' -- PLAY MOD FILE WHEN ENABLED --
 Sub PlayMOD(m)
- Play Stop: Play MODFile "./MOD/" + ModMus$(m,0) + ".mod", 22050
+ Play Stop
+ StopWAV
+ Play MODFile "./MOD/" + ModMus$(m,0) + ".mod", 22050
 End Sub
 
 
